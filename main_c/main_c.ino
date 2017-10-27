@@ -5,7 +5,7 @@
 #include <EEPROM.h>
 
 
-#define COUNT_ADDR 0 
+#define COUNT_ADDR 0
 #define EEPROM_CANARY 10
 
 const int pushButtonPin = 11;     // the number of the pushbutton pin
@@ -20,7 +20,8 @@ volatile unsigned int count = 0;
 
 
 void setup() {
-  unsigned byte value, canary;
+  uint8_t value;
+  uint8_t canary;
   unsigned int tmp_count;
   // initialize the LED pin as an output:
   pinMode(ledPin, OUTPUT);
@@ -29,8 +30,8 @@ void setup() {
   // Attach an interrupt to the ISR vector
   attachInterrupt(0, pushButton_ISR, CHANGE);
   attachInterrupt(0, closeButton_ISR, CHANGE);
-  
-  
+
+
   //If the EEPROM has been initialized, grab the value
   canary = EEPROM.read(EEPROM_CANARY);
   if (!canary) {
@@ -39,7 +40,7 @@ void setup() {
       count = value << i*sizeof(byte);
     }
   }
-  
+
   // If the EEPROM has not been touched, clear it
   else {
     for(int i = 0; i < 4; i++) {
@@ -48,7 +49,6 @@ void setup() {
     EEPROM.write(EEPROM_CANARY, 0);
     count = 0;
   }
-  
 }
 
 void loop() {
@@ -61,5 +61,5 @@ void closeButton_ISR() {
 
 void pushButton_ISR() {
   pushButtonState = digitalRead(pushButtonPin);
-  
+
 }
