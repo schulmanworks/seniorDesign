@@ -65,7 +65,25 @@ void setup() {
 void loop() {
   // Nothing here!]
   curState = Neutral;
-  while(1){}
+  int oldCount = -1;
+  enum State oldState = Initial;
+
+  while(1){
+    if (oldCount != count) {
+      Serial.print("Count:");
+      Serial.print(count);
+      Serial.print("\n");
+      oldCount = count;
+    }
+    if (oldState != curState) {
+      Serial.print("state:");
+      Serial.print(curState);
+      Serial.print(" count: ");
+      Serial.print(count);
+      Serial.print("\n");
+      oldState = curState;
+    }
+  }
 }
 
 void processStateMachine() {
@@ -77,8 +95,9 @@ void processStateMachine() {
       }
       else
       {
-        curstate = Initial;
+        curState = Initial;
       }
+      break;
 
     case Neutral:
       //turn magnet on
@@ -97,23 +116,22 @@ void processStateMachine() {
       }
       if(closeButtonState){
         curState = Opened;
+        count++;
       }
       else{
-        Curstate = Neutral;
+        curState = Neutral;
       }
       break;
 
-    case Opened:
-        count++;
-        //magnet should already be off
-        curState = Open;
-        break;
+    // case Opened:
+    //     count++;
+    //     //magnet should already be off
+    //     curState = Open;
+    //     break;
 
-    case Open:
+    case Opened:
       //Magnet
-      if(closeButtonState){
-        curState = Open;
-      } else if(!closeButtonState && pushButtonState){
+      if(!closeButtonState && pushButtonState){
         curState = Closed;
       }
       else{
@@ -126,12 +144,14 @@ void processStateMachine() {
 
 void closeButton_ISR() {
  closeButtonState = digitalRead(closeButtonPin);
+ Serial.print(closeButtonState);
  processStateMachine();
  // Serial.print("cl\n");
 }
 
 void pushButton_ISR() {
   pushButtonState = digitalRead(pushButtonPin);
+  Serial.print(pushButtonState);
   processStateMachine();
   // Serial.print("op\n");
 }
