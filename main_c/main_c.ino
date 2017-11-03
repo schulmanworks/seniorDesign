@@ -13,7 +13,7 @@
 #define CLOSE = 0
 
 
-enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3};
+enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3, Open = 4};
 
 
 const int pushButtonPin = 2;     // the number of the pushbutton pin
@@ -65,27 +65,73 @@ void setup() {
 void loop() {
   // Nothing here!]
   curState = Neutral;
-  int oldState = 0;
-  while(1){
+  while(1){}
+}
+
+void processStateMachine() {
+  switch (curState) {
+    case Initial:
+      //load data from EEPROM
+      if(!pushButtonState && !closeButtonState){
+        curState = Neutral;
+      }
+      else
+      {
+        curstate = Initial;
+      }
+
+    case Neutral:
+      //turn magnet on
+      if(pushButtonState){
+        curState = Closed;
+      }
+      else{
+        curState = Neutral;
+      }
+      break;
+
+    case Closed:
+      //turn magnet off
+      if(pushButtonState && !closeButtonState){
+        curState = Closed;
+      }
+      if(closeButtonState){
+        curState = Opened;
+      }
+      else{
+        Curstate = Neutral;
+      }
+      break;
+
+    case Opened:
+        count++;
+        //magnet should already be off
+        curState = Open;
+        break;
+
+    case Open:
+      //Magnet
+      if(closeButtonState){
+        curState = Open;
+      } else if(!closeButtonState && pushButtonState){
+        curState = Closed;
+      }
+      else{
+        curState = Neutral;
+      }
+      break;
+
   }
 }
 
 void closeButton_ISR() {
  closeButtonState = digitalRead(closeButtonPin);
- if (closeButtonState) {
-
- }
- else {
-
- }
+ processStateMachine();
  // Serial.print("cl\n");
 }
 
 void pushButton_ISR() {
   pushButtonState = digitalRead(pushButtonPin);
-  switch (curState) {
-    case
-
-  }
+  processStateMachine();
   // Serial.print("op\n");
 }
