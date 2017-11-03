@@ -18,6 +18,8 @@ enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3, Open = 4};
 
 const int pushButtonPin = 2;     // the number of the pushbutton pin
 const int closeButtonPin = 3;
+const int relayPin1 = 12;
+const int relayPin2 = 13;
 // const int ledPin =  13;      // the number of the LED pin
 
 // variables will change:
@@ -38,6 +40,9 @@ void setup() {
 
   pinMode(closeButtonPin, INPUT);
   pinMode(pushButtonPin, INPUT);
+
+  pinMode(relayPin2, OUTPUT);
+  pinMode(relayPin1, OUTPUT);
   // Attach an interrupt to the ISR vector
   attachInterrupt(0, pushButton_ISR, CHANGE);
   attachInterrupt(1, closeButton_ISR, CHANGE);
@@ -100,9 +105,11 @@ void processStateMachine() {
       break;
 
     case Neutral:
-      //turn magnet on
       if(pushButtonState){
         curState = Closed;
+        // turn magnet off
+        digitalWrite(relayPin1, 0);
+        digitalWrite(relayPin2, 1)
       }
       else{
         curState = Neutral;
@@ -110,7 +117,6 @@ void processStateMachine() {
       break;
 
     case Closed:
-      //turn magnet off
       if(pushButtonState && !closeButtonState){
         curState = Closed;
       }
@@ -136,6 +142,9 @@ void processStateMachine() {
       }
       else{
         curState = Neutral;
+        //turn magnet on
+        digitalWrite(relayPin1, 1);
+        digitalWrite(relayPin2, 0)
       }
       break;
 
@@ -144,14 +153,12 @@ void processStateMachine() {
 
 void closeButton_ISR() {
  closeButtonState = digitalRead(closeButtonPin);
- Serial.print(closeButtonState);
  processStateMachine();
  // Serial.print("cl\n");
 }
 
 void pushButton_ISR() {
   pushButtonState = digitalRead(pushButtonPin);
-  Serial.print(pushButtonState);
   processStateMachine();
   // Serial.print("op\n");
 }
