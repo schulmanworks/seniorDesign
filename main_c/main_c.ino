@@ -12,7 +12,10 @@
 #define OPEN = 1
 #define CLOSE = 0
 
-
+void init_lcd(void);
+void init_relay(void);
+void magnetOn(void);
+void  magnetOff(void);
 enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3, Open = 4};
 
 
@@ -27,8 +30,35 @@ volatile int pushButtonState = 0;         // variable for reading the pushbutton
 volatile int closeButtonState = 0;
 volatile unsigned int count = 0;
 enum State curState = Initial;
+GOFi2cOLED GOFoled;
 
+void init_lcd(void) {
+  GOFoled.init(0x3C);  //initialze  OLED display
 
+  GOFoled.display(); // show splashscreen
+  delay(2000);
+  GOFoled.clearDisplay();
+
+  GOFoled.setTextSize(1);
+  GOFoled.setTextColor(WHITE);
+  GOFoled.setCursor(0,0);
+  GOFoled.println("Hello, world!");
+  GOFoled.println(-1234);
+  GOFoled.println(3.14159);
+  GOFoled.setTextColor(BLACK, WHITE); // 'inverted' text
+  GOFoled.println(3.14159,5);
+  GOFoled.setTextSize(2);
+  GOFoled.setTextColor(WHITE);
+  GOFoled.print("0x"); GOFoled.println(0xDEADBEEF, HEX);
+  GOFoled.display();
+}
+
+void init_relay(void) {
+
+  pinMode(relayPin2, OUTPUT);
+  pinMode(relayPin1, OUTPUT);
+  magnetOn();
+}
 void setup() {
   uint8_t value;
   uint8_t canary;
@@ -38,11 +68,13 @@ void setup() {
   // initialize the pushbutton pin as an input:
   Serial.begin(9600);
 
+  init_lcd();
+
   pinMode(closeButtonPin, INPUT);
   pinMode(pushButtonPin, INPUT);
 
-  pinMode(relayPin2, OUTPUT);
-  pinMode(relayPin1, OUTPUT);
+  init_relay();
+
   // Attach an interrupt to the ISR vector
   attachInterrupt(0, pushButton_ISR, CHANGE);
   attachInterrupt(1, closeButton_ISR, CHANGE);
@@ -65,6 +97,8 @@ void setup() {
     EEPROM.write(EEPROM_CANARY, 0);
     count = 0;
   }
+
+
 }
 
 void loop() {
@@ -90,7 +124,16 @@ void loop() {
     }
   }
 }
-
+void magnetOn(void) {
+  //turn magnet on
+  digitalWrite(relayPin1, 1);
+  digitalWrite(relayPin2, 0);
+}
+void magnetOff(void) {
+  // turn magnet off
+  digitalWrite(relayPin1, 0);
+  digitalWrite(relayPin2, 1);
+}
 void processStateMachine() {
   switch (curState) {
     case Initial:
@@ -107,9 +150,7 @@ void processStateMachine() {
     case Neutral:
       if(pushButtonState){
         curState = Closed;
-        // turn magnet off
-        digitalWrite(relayPin1, 0);
-        digitalWrite(relayPin2, 1)
+        magnetOff();
       }
       else{
         curState = Neutral;
@@ -120,7 +161,7 @@ void processStateMachine() {
       if(pushButtonState && !closeButtonState){
         curState = Closed;
       }
-      if(closeButtonState){
+      else if(closeButtonState){
         curState = Opened;
         count++;
       }
@@ -142,9 +183,7 @@ void processStateMachine() {
       }
       else{
         curState = Neutral;
-        //turn magnet on
-        digitalWrite(relayPin1, 1);
-        digitalWrite(relayPin2, 0)
+        magnetOn();
       }
       break;
 
@@ -152,13 +191,30 @@ void processStateMachine() {
 }
 
 void closeButton_ISR() {
- closeButtonState = digitalRead(closeButtonPin);
- processStateMachine();
+  static unsigned long last_interrupt_time1 = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time1 > 200)
+  {
+
+      Serial.print("close isr\n");
+   closeButtonState = digitalRead(closeButtonPin);
+   processStateMachine();
+  }
+  last_interrupt_time1 = interrupt_time;
  // Serial.print("cl\n");
 }
 
 void pushButton_ISR() {
-  pushButtonState = digitalRead(pushButtonPin);
-  processStateMachine();
-  // Serial.print("op\n");
+  static unsigned long last_interrupt_time2 = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time2 > 200)
+  {
+        Serial.print("push isr\n");
+    pushButtonState = digitalRead(pushButtonPin);
+    processStateMachine();
+  }
+  last_interrupt_time2 = interrupt_time;
+// Serial.print("op\n");
 }
