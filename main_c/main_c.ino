@@ -6,7 +6,6 @@
 
 // #include <Serial.h>
 
-
 #define COUNT_ADDR 0
 #define EEPROM_CANARY 10
 #define OPEN = 1
@@ -26,11 +25,12 @@ const int relayPin1 = 12;
 const int relayPin2 = 13;
 // const int ledPin =  13;      // the number of the LED pin
 
-// variables will change:
+// closeButtonState is closed at 0
+// pushbuttonState is pushed at 1
 volatile int pushButtonState = 0;         // variable for reading the pushbutton status
 volatile int closeButtonState = 0;
 volatile unsigned int count = 0;
-enum State curState = Initial;
+volatile enum State curState = Initial;
 GOFi2cOLED GOFoled;
 
 void init_lcd(void) {
@@ -127,9 +127,6 @@ void loop() {
   enum State oldState = Initial;
 
   while(1){
-    delay(1000);
-    count++;
-    updateLCD();
     if (oldCount != count) {
       Serial.print("Count:");
       Serial.print(count);
@@ -180,15 +177,16 @@ void processStateMachine() {
       break;
 
     case Closed:
-      if(pushButtonState && !closeButtonState){
-        curState = Closed;
-      }
-      else if(closeButtonState){
+      if(closeButtonState){
         curState = Opened;
         count++;
+        updateLCD();
       }
-      else{
+      else if(!pushButtonState){
         curState = Neutral;
+      }
+      else {
+        curState = Closed;
       }
       break;
 
