@@ -16,6 +16,7 @@ void init_lcd(void);
 void init_relay(void);
 void magnetOn(void);
 void  magnetOff(void);
+void updateLCD(void);
 enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3, Open = 4};
 
 
@@ -38,18 +39,31 @@ void init_lcd(void) {
   GOFoled.display(); // show splashscreen
   delay(2000);
   GOFoled.clearDisplay();
-
-  GOFoled.setTextSize(1);
-  GOFoled.setTextColor(WHITE);
   GOFoled.setCursor(0,0);
-  GOFoled.println("Hello, world!");
-  GOFoled.println(-1234);
-  GOFoled.println(3.14159);
-  GOFoled.setTextColor(BLACK, WHITE); // 'inverted' text
-  GOFoled.println(3.14159,5);
   GOFoled.setTextSize(2);
   GOFoled.setTextColor(WHITE);
-  GOFoled.print("0x"); GOFoled.println(0xDEADBEEF, HEX);
+
+  // GOFoled.setTextSize(1);
+  // GOFoled.setTextColor(WHITE);
+  // GOFoled.setCursor(0,0);
+  // GOFoled.println("Hello, world!");
+  // GOFoled.println(-1234);
+  // GOFoled.println(3.14159);
+  // GOFoled.setTextColor(BLACK, WHITE); // 'inverted' text
+  // GOFoled.println(3.14159,5);
+  // GOFoled.setTextSize(2);
+  // GOFoled.setTextColor(WHITE);
+  // GOFoled.print("0x"); GOFoled.println(0xDEADBEEF, HEX);
+  // GOFoled.display();
+}
+
+void updateLCD(void) {
+  char s[11];
+  sprintf(s, "%u", count);
+  GOFoled.clearDisplay();
+  GOFoled.setCursor(0,0);
+  GOFoled.println("Count:");
+  GOFoled.println(s);
   GOFoled.display();
 }
 
@@ -59,26 +73,11 @@ void init_relay(void) {
   pinMode(relayPin1, OUTPUT);
   magnetOn();
 }
-void setup() {
+
+void init_count(void) {
   uint8_t value;
   uint8_t canary;
   unsigned int tmp_count;
-  // initialize the LED pin as an output:
-  // pinMode(ledPin, OUTPUT);
-  // initialize the pushbutton pin as an input:
-  Serial.begin(9600);
-
-  init_lcd();
-
-  pinMode(closeButtonPin, INPUT);
-  pinMode(pushButtonPin, INPUT);
-
-  init_relay();
-
-  // Attach an interrupt to the ISR vector
-  attachInterrupt(0, pushButton_ISR, CHANGE);
-  attachInterrupt(1, closeButton_ISR, CHANGE);
-
 
   //If the EEPROM has been initialized, grab the value
   canary = EEPROM.read(EEPROM_CANARY);
@@ -97,8 +96,28 @@ void setup() {
     EEPROM.write(EEPROM_CANARY, 0);
     count = 0;
   }
+}
+
+void setup() {
+  // initialize the LED pin as an output:
+  // pinMode(ledPin, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  Serial.begin(9600);
+
+  init_count();
+
+  init_lcd();
+  updateLCD();
 
 
+  pinMode(closeButtonPin, INPUT);
+  pinMode(pushButtonPin, INPUT);
+
+  init_relay();
+
+  // Attach an interrupt to the ISR vector
+  attachInterrupt(0, pushButton_ISR, CHANGE);
+  attachInterrupt(1, closeButton_ISR, CHANGE);
 }
 
 void loop() {
@@ -108,6 +127,9 @@ void loop() {
   enum State oldState = Initial;
 
   while(1){
+    delay(1000);
+    count++;
+    updateLCD();
     if (oldCount != count) {
       Serial.print("Count:");
       Serial.print(count);
@@ -186,7 +208,6 @@ void processStateMachine() {
         magnetOn();
       }
       break;
-
   }
 }
 
@@ -196,8 +217,6 @@ void closeButton_ISR() {
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time1 > 200)
   {
-
-      Serial.print("close isr\n");
    closeButtonState = digitalRead(closeButtonPin);
    processStateMachine();
   }
@@ -211,7 +230,6 @@ void pushButton_ISR() {
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time2 > 200)
   {
-        Serial.print("push isr\n");
     pushButtonState = digitalRead(pushButtonPin);
     processStateMachine();
   }
