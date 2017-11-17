@@ -242,6 +242,7 @@ void processStateMachine() {
       }
       else if(!pushButtonState){
         curState = Neutral;
+        magnetOn();
           // printLCDStr("neutral");
       }
       else {
