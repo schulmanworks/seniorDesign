@@ -161,13 +161,8 @@ void loop() {
   // Serial.print(" state:");
   // Serial.print(curState);
   // Serial.print("\n");
-   closeButtonState = digitalRead(closeButtonPin);
-    pushButtonState = digitalRead(pushButtonPin);
-// Serial.print("push: ");
-// Serial.print(pushButtonState);
-// Serial.print(" door: ");
-// Serial.print(closeButtonState);
-// Serial.print("\n");
+  closeButtonState = digitalRead(closeButtonPin);
+  pushButtonState = digitalRead(pushButtonPin);
   if (oldPush != pushButtonState || oldDoor != closeButtonState) {
     processStateMachine();
     oldPush = pushButtonState;
@@ -227,6 +222,10 @@ void processStateMachine() {
       if(pushButtonState){
         curState = Closed;
         magnetOff();
+        delay(4000);
+        closeButtonState = digitalRead(closeButtonPin);
+        pushButtonState = digitalRead(pushButtonPin);
+        processStateMachine();
           // printLCDStr("closed");
       }
       else{
