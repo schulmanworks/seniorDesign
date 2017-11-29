@@ -8,29 +8,24 @@
 
 // #include <Serial.h>
 
-#define COUNT_ADDR 0
-#define EEPROM_CANARY 10
-#define OPEN = 1
-#define CLOSE = 0
-
 void init_lcd(void);
 void init_relay(void);
 void magnetOn(void);
-void  magnetOff(void);
+void magnetOff(void);
 void updateLCD(void);
-bool tryLock(char *m);
+
+// States the door can be in for processStateMachine
 enum State {Initial=0, Neutral=1, Closed = 2, Opened = 3, Open = 4};
 
-
-const int pushButtonPin = 2;     // the number of the pushbutton pin
+// define pins
+const int pushButtonPin = 2;
 const int closeButtonPin = 3;
 const int relayPin1 = 12;
 const int relayPin2 = 13;
 int processStateLock = 0;
-// const int ledPin =  13;      // the number of the LED pin
 
-// closeButtonState is closed at 0
-// pushbuttonState is pushed at 1
+// closeButtonState is 0 when door is closed
+// pushbuttonState is 1 when button is pushed
 volatile int pushButtonState = 0;         // variable for reading the pushbutton status
 volatile int closeButtonState = 1;
 volatile unsigned int count = 0;
@@ -57,20 +52,7 @@ void init_lcd(void) {
   GOFoled.clearDisplay();
   GOFoled.setCursor(0,0);
   GOFoled.setTextSize(2);
-  GOFoled.setTextColor(WHITE);
-
-  // GOFoled.setTextSize(1);
-  // GOFoled.setTextColor(WHITE);
-  // GOFoled.setCursor(0,0);
-  // GOFoled.println("Hello, world!");
-  // GOFoled.println(-1234);
-  // GOFoled.println(3.14159);
-  // GOFoled.setTextColor(BLACK, WHITE); // 'inverted' text
-  // GOFoled.println(3.14159,5);
-  // GOFoled.setTextSize(2);
-  // GOFoled.setTextColor(WHITE);
-  // GOFoled.print("0x"); GOFoled.println(0xDEADBEEF, HEX);
-  // GOFoled.display();
+  GOFoled.setTextColor(WHITE);s
 }
 
 void updateLCD(void) {
@@ -89,43 +71,14 @@ void printLCDStr(char* c) {
 }
 
 void init_relay(void) {
-
   pinMode(relayPin2, OUTPUT);
   pinMode(relayPin1, OUTPUT);
   magnetOn();
 }
 
-void init_count(void) {
-  uint8_t value;
-  uint8_t canary;
-  unsigned int tmp_count;
-
-  //If the EEPROM has been initialized, grab the value
-  canary = EEPROM.read(EEPROM_CANARY);
-  if (!canary) {
-    for(int i = 0; i < 4; i++) {
-      value = EEPROM.read(COUNT_ADDR + i);
-      count = value << i*sizeof(byte);
-    }
-  }
-
-  // If the EEPROM has not been touched, clear it
-  else {
-    for(int i = 0; i < 4; i++) {
-      EEPROM.write(COUNT_ADDR + i, 0);
-    }
-    EEPROM.write(EEPROM_CANARY, 0);
-    count = 0;
-  }
-}
-
 void setup() {
-  // initialize the LED pin as an output:
-  // pinMode(ledPin, OUTPUT);
-  // initialize the pushbutton pin as an input:
   Serial.begin(9600);
 
-  // init_count();
   count = 0;
 
   init_lcd();
@@ -137,9 +90,6 @@ void setup() {
 
   init_relay();
 
-  // Attach an interrupt to the ISR vector
-  // attachInterrupt(0, pushButton_ISR, CHANGE);
-  // attachInterrupt(1, closeButton_ISR, CHANGE);
   processStateMachine();
 }
 int oldPush = -1;
@@ -151,29 +101,20 @@ void loop() {
   enum State oldState = Neutral;
 
   while(1){
-    // closeButtonState = digitalRead(closeButtonPin);
-    // pushButtonState = digitalRead(pushButtonPin);
-    // processStateMachine();
-  // Serial.print("push: ");
-  // Serial.print(pushButtonState);
-  // Serial.print(" door: ");
-  // Serial.print(closeButtonState);
-  // Serial.print(" state:");
-  // Serial.print(curState);
-  // Serial.print("\n");
-  closeButtonState = digitalRead(closeButtonPin);
-  pushButtonState = digitalRead(pushButtonPin);
-  if (oldPush != pushButtonState || oldDoor != closeButtonState) {
-    processStateMachine();
-    oldPush = pushButtonState;
-    oldDoor = closeButtonState;
-  }
+    closeButtonState = digitalRead(closeButtonPin);
+    pushButtonState = digitalRead(pushButtonPin);
+    // Only process on change
+    if (oldPush != pushButtonState || oldDoor != closeButtonState) {
+      processStateMachine();
+      oldPush = pushButtonState;
+      oldDoor = closeButtonState;
+    }
     if (oldState != curState || oldCount != count) {
-  Serial.print("push: ");
-  Serial.print(pushButtonState);
-  Serial.print(" door: ");
-  Serial.print(closeButtonState);
-  Serial.print("\n");
+      Serial.print("push: ");
+      Serial.print(pushButtonState);
+      Serial.print(" door: ");
+      Serial.print(closeButtonState);
+      Serial.print("\n");
       Serial.print("state:");
       Serial.print(curState);
       Serial.print(" count: ");
@@ -197,24 +138,19 @@ void magnetOff(void) {
   digitalWrite(relayPin1, 0);
   digitalWrite(relayPin2, 1);
 }
+
+// Keep in mind, you need to act during the transition from one state to another.
+// Don't do closing actions in the "Closed" block, do it on the transition from
+// opened to closed
 void processStateMachine() {
-  // while (tryLock(&processStateLock)) ;
-  // Serial.print("push: ");
-  // Serial.print(pushButtonState);
-  // Serial.print("door: ");
-  // Serial.print(closeButtonState);
-  // Serial.print("\n");
   switch (curState) {
     case Initial:
-      //load data from EEPROM
       if(!pushButtonState && !closeButtonState){
         curState = Neutral;
-        // printLCDStr("neutral");
       }
       else
       {
         curState = Initial;
-        // printLCDStr("initial");
       }
       break;
 
@@ -226,32 +162,26 @@ void processStateMachine() {
         closeButtonState = digitalRead(closeButtonPin);
         pushButtonState = digitalRead(pushButtonPin);
         processStateMachine();
-          // printLCDStr("closed");
       }
       else{
         curState = Neutral;
-          // printLCDStr("neutral");
       }
       break;
 
     case Closed:
       if (closeButtonState) {
         curState = Opened;
-        // printLCDStr("opened");
       }
       else if(!pushButtonState){
         curState = Neutral;
         magnetOn();
-          // printLCDStr("neutral");
       }
       else {
         curState = Closed;
-          // printLCDStr("closed");
       }
       break;
 
     case Opened:
-      //Magnet
       if(closeButtonState && !pushButtonState){
         curState = Opened;
       }
@@ -268,33 +198,4 @@ void processStateMachine() {
       }
       break;
   }
-  // unlock(&processStateLock);
-}
-
-void closeButton_ISR() {
-  //Serial.print("In close ISR\n");
-  static unsigned long last_interrupt_time1 = 0;
-  unsigned long interrupt_time1 = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time1 - last_interrupt_time1 > 200)
-  {
-   closeButtonState = digitalRead(closeButtonPin);
-  //  processStateMachine();
-  }
-  last_interrupt_time1 = interrupt_time1;
- // Serial.print("cl\n");
-}
-
-void pushButton_ISR() {
-  //Serial.print("In button ISR\n");
-  static unsigned long last_interrupt_time2 = 0;
-  unsigned long interrupt_time2 = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time2 - last_interrupt_time2 > 200)
-  {
-    pushButtonState = digitalRead(pushButtonPin);
-    // processStateMachine();
-  }
-  last_interrupt_time2 = interrupt_time2;
-// Serial.print("op\n");
 }
