@@ -250,12 +250,6 @@ void processStateMachine() {
       }
       break;
 
-    // case Opened:
-    //     count++;
-    //     //magnet should already be off
-    //     curState = Open;
-    //     break;
-
     case Opened:
       //Magnet
       if(closeButtonState && !pushButtonState){
