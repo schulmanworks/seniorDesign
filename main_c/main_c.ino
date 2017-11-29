@@ -30,20 +30,10 @@ volatile int pushButtonState = 0;         // variable for reading the pushbutton
 volatile int closeButtonState = 1;
 volatile unsigned int count = 0;
 volatile enum State curState = Initial;
+
+// LCD Driver object
 GOFi2cOLED GOFoled;
-bool tryLock(int *m) {
-  if (*m) {
-    return false;
-  }
-  else {
-    *m = 1;
-    return true;
-  }
-}
-bool unlock(int *m) {
-  *m = 0;
-  return true;
-}
+
 void init_lcd(void) {
   GOFoled.init(0x3C);  //initialze  OLED display
 
@@ -52,7 +42,7 @@ void init_lcd(void) {
   GOFoled.clearDisplay();
   GOFoled.setCursor(0,0);
   GOFoled.setTextSize(2);
-  GOFoled.setTextColor(WHITE);s
+  GOFoled.setTextColor(WHITE);
 }
 
 void updateLCD(void) {
